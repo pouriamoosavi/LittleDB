@@ -1,5 +1,8 @@
 #include <Arduino.h>
-#include "littleDB.cpp"
+#include "FS.h"
+#include <LITTLEFS.h>
+
+#include "littleDB.h"
 
 void setup() {
   Serial.begin(115200);

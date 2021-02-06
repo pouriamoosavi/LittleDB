@@ -1,6 +1,9 @@
 #include <Arduino.h>
+#include "FS.h"
+#include <LITTLEFS.h>
 #include <unity.h>
-#include "littleDB.cpp"
+
+#include "littleDB.h"
 
 void create_db() {
   int8_t res = execQuery("create db test_db");

@@ -2,70 +2,10 @@
 #include "FS.h"
 #include <LITTLEFS.h>
 
-// dbs
-const String CREATE_DB = "create db ";
-const String DROP_DB = "drop db ";
-const String CONNECT_DB = "use db ";
+#include "littleDB.h"
 
-// tables
-const String CREATE_TBL = "create table ";
-const String DROP_TBL = "drop table ";
-const String ALTER_TBL = "alter table ";
-
-const String ALTER_TBL_ADD = "add column ";
-const String ALTER_TBL_ALTER = "alter column ";
-const String ALTER_TBL_DROP = "drop column ";
-
-// rows
-const String SELECT = "select from ";
-const String UPDATE = "update ";
-const String DELETE = "delete from ";
-const String INSERT = "insert into ";
-
-// others
-const String FORMAT_FS = "drop all dbs and format fs ";
-const String COMPACT = "compact table ";
-
-// database and tables config
 String CONNECTED_DB;
-
-const String prefix = "/"; // must have / at the end
-const int dbNameLimit = 31;
-const int tblNameLimit = 29;
-
-// cel types and length
-const String CELL_TYPE_ID = "id";
-const uint8_t CELL_TYPE_ID_LEN = 16;
-const String CELL_TYPE_INT = "int";
-const uint8_t CELL_TYPE_INT_LEN = 4;
-const String CELL_TYPE_TINYINT = "tinyint";
-const uint8_t CELL_TYPE_TINYINT_LEN = 1;
-const String CELL_TYPE_TEXT = "text";
-
-// responses
-const int8_t RES_OK = 0;
-const int8_t RES_EMPTY = -4;
-const int8_t RES_SYSTEM_ERR = -1;
-const int8_t RES_USER_ERR = -2;
-const int8_t RES_NOT_IMPLEMENTED = -3;
-
-// options
-const uint8_t OPT_DEFAULT = 0b00000000;
-const uint8_t OPT_DELETED = 0b00000001;
-
-// structs for select and insert
-struct InsertData_t {
-  uint16_t usedLen;
-  uint16_t len;
-  byte bytes[];
-};
 InsertData_t* insertData;
-
-struct SelectData_t {
-  uint16_t len;
-  char tblName[tblNameLimit];
-  byte bytes[];
-};
 SelectData_t* selectData;
 
 // work with files
