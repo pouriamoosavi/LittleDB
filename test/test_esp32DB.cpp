@@ -64,6 +64,16 @@ void select_one_row() {
   TEST_ASSERT ( memcmp(selectData->bytes, rowShouldBe, 44) == 0 );
 }
 
+void get_text() {
+  String name = getText(selectData, "name");
+  TEST_ASSERT( name == "text-1234567890abc" );
+}
+
+void get_int() {
+  int32_t age = getInt32(selectData, "age");
+  TEST_ASSERT( age == 20 );
+}
+
 void update_one_row() {
   int8_t res = execQuery("update test_tbl set name=updated where id=1234567890abc");
   TEST_ASSERT( res == RES_OK );
@@ -120,7 +130,7 @@ void setup() {
   Serial.begin(115200);
   LITTLEFS.begin(true);
   
-  LITTLEFS.format();
+  //LITTLEFS.format();
 
   UNITY_BEGIN();
 
@@ -129,6 +139,8 @@ void setup() {
   RUN_TEST(create_table);
   RUN_TEST(insert_one_row);
   RUN_TEST(select_one_row);
+  RUN_TEST(get_text);
+  RUN_TEST(get_int);
   RUN_TEST(update_one_row);
   RUN_TEST(delete_one_row);
   RUN_TEST(drop_table);
