@@ -8,7 +8,7 @@ void setup() {
   Serial.begin(115200);
   LITTLEFS.begin(true);
   delay(1000);
-  
+  LITTLEFS.format();
   execQuery("create db test1");
   execQuery("use db test1");
   
@@ -19,23 +19,36 @@ void setup() {
   int8_t it = execQuery("insert into test_tbl values (1, 10, 1, text-1)");
   Serial.print("it: ");
   Serial.println(it);
+  printInsertData();
 
   it = execQuery("insert into test_tbl values (2, 10, 1, text-2)");
   Serial.print("it: ");
   Serial.println(it);
+  printInsertData();
 
   listDir(LITTLEFS, "/", 2);
 
   execQuery("update test_tbl set name=text-12 where id=1");
   execQuery("update test_tbl set name=text-13 where id=1");
 
+  Serial.println("Befor compact");
   listDir(LITTLEFS, "/", 2);
+  delay(2000);
+  Serial.println("=======================================");
 
   int8_t ct = execQuery("compact table test_tbl");
   Serial.print("ct: ");
   Serial.println(ct);
 
   listDir(LITTLEFS, "/", 2);
+
+  delay(2000);
+  Serial.println("=======================================");
+  execQuery("select from test_tbl where id=1");
+  printSelectData();
+  Serial.println("=======================================");
+  execQuery("select from test_tbl where id=2");
+  printSelectData();
 /*
   int8_t it = execQuery("insert into test_tbl values (1234567890abcde, 10, 1, text-1234567890abcde)");
   Serial.print("it: ");

@@ -82,6 +82,8 @@ int8_t deleteFile(fs::FS &fs, String path);
 int8_t renameFile(fs::FS &fs, String from, String to);
 // prints ===============================
 void printArray(byte *input, short len);
+void printInsertData();
+void printSelectData();
 // geters ===============================
 String getText(SelectData_t* selectData, String colName);
 int32_t getInt32(SelectData_t* selectData, String colName);

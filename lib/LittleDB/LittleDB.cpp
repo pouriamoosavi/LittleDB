@@ -125,6 +125,26 @@ void printArray(byte *input, short len){
   Serial.println("z");
 }
 
+void printInsertData() {
+  short i;
+  for(i=0; i< insertData->len; i++){
+    if(insertData->bytes[i]<16) Serial.print(0);
+    Serial.print(insertData->bytes[i], HEX);
+    Serial.print(" ");
+  }
+  Serial.println("z");
+}
+
+void printSelectData() {
+  short i;
+  for(i=0; i< selectData->len; i++){
+    if(selectData->bytes[i]<16) Serial.print(0);
+    Serial.print(selectData->bytes[i], HEX);
+    Serial.print(" ");
+  }
+  Serial.println("z");
+}
+
 String getText(SelectData_t* selectData, String colName) {
   String tblNameStr = String(selectData->tblName);
   if(!tblNameStr || tblNameStr.length() == 0) {
@@ -566,7 +586,7 @@ int8_t compactTable(File oldTblFile, String newTblPath) {
       continue;
     }
 
-    oldTblFile.seek(3, SeekCur); // return to the beginning of this row
+    oldTblFile.seek(-3, SeekCur); // return to the beginning of this row
     insertData = (InsertData_t*)realloc(insertData, rowLen + 2 + 2); // + 2 byte len + 2 byte usedLen;
     insertData->len = rowLen;
     oldTblFile.readBytes((char*)insertData->bytes, rowLen);
@@ -750,8 +770,6 @@ int8_t execInsert(String query) {
 
 // others =================================
 int8_t execCompact(String query) {
-  return RES_NOT_IMPLEMENTED;
-  
   String tblName = query.substring(14);
   tblName.trim();
 
