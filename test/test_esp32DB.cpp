@@ -3,7 +3,7 @@
 #include <LITTLEFS.h>
 #include <unity.h>
 
-#include "littleDB.h"
+#include <LittleDB.h>
 
 void create_db() {
   int8_t res = execQuery("create db test_db");
@@ -111,7 +111,6 @@ void delete_one_row() {
 
 void drop_table() {
   int8_t res = execQuery("drop table test_tbl");
-  Serial.println(res);
   TEST_ASSERT( res == RES_OK );
 
   String tblPath = "/test_db/test_tbl";
