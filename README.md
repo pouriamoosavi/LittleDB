@@ -58,7 +58,7 @@ A little Sql like database, which runs on esp32. This library works with esp32 f
   Variable size data type to store variable size data (String), example: "Hello World with any length you wish"
 
 ## Examples and tests
- 
+Refer to test folder.
 
 ## Run Tests
 ### In Arduino IDE
