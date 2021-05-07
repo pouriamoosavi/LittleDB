@@ -407,9 +407,9 @@ int8_t findRowWithAnyField(
       }
     }
     // we are at the end of schemFile and we SHOULD be at the end of this row in tblFile
-
   }
 
+  return RES_EMPTY;
 }
 
 int8_t deleteRowWithID(File tblFile, String id) {
