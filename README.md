@@ -20,17 +20,17 @@ A little Sql like database, which runs on esp32. This library works with esp32 f
 - #### ALTER_TBL `alter table [TABLE_NAME]` _(Not yet implemented)_
   Not yet implemented.
 
-- #### SELECT `select from [TABLE_NAME] where id=[CONDITION]`
-  Selects one row and write result into memory. A global variable with name `selectDate` and type `SelectData_t` will be created. it will be declared with corresponding row. For now it is not possible to select base on other fields than `id`
+- #### SELECT `select from [TABLE_NAME] where [COLUMN_NAME]=[CONDITION]`
+  Selects one row and write result into memory. A global variable with name [selectData](#selectData) and type `SelectData_t` will be created. It will be declared with corresponding row. Although it is possible to select base on any field, selecting by `id` is more optimal base on both memory and time.
 
 - #### UPDATE `update [TABLE_NAME] set [COLUMN_NAME]=[VALUE] where id=[CONDITION]`
   Update one row and set a new value for one column. It tries to cast value into corresponding column's type. Because of write limit on esp memories, this query perform one delete and one insert underneath. For now it is not possible to update base on other fields than `id`
 
 - #### DELETE `delete from [TABLE_NAME] where id=[CONDITION]`
-  Delete one row. Because of write limit on esp memories this query just set one bit, which then will be use to detect if this row is deleted. 
+  Delete one row. Because of write limit on esp memories this query just set one bit, which then will be use to detect if this row is deleted. For now it is not possible to delete base on other fields than `id`
 
 - #### INSERT `insert into [TABLE_NAME] values ([VALUE_1], [VALUE_2], [VALUE_3], ...)`
-  Insert one row into table. A global variable with name `insertData` and type `InsertData_t` will be created. it will be declared with corresponding row. This query tries to cast values into corresponding column's types. values must be in the same order as schema.
+  Insert one row into table. A global variable with name [insertData](#insertData) and type `InsertData_t` will be created. it will be declared with corresponding row. This query tries to cast values into corresponding column's types. values must be in the same order as schema.
 
 - #### FORMAT_FS `drop all dbs and format fs ` _(Caution)_
   Delete everything and format fs.
@@ -44,21 +44,48 @@ A little Sql like database, which runs on esp32. This library works with esp32 f
 - #### getInt32(selectDate: SelectData_t, columnName: String | char*): int32_t
   Get an 32 bit int base on column name from selectedData and returns it.
 
+## Responses
+| Response Number |    Response Code    |                                         Description                                         |
+|---------------|-------------------|-------------------------------------------------------------------------------------------|
+| 0               | RES_OK              | Everything works fine. (e.g: if you are selecting [selectData](#selectData) is now initialized with selected row.)                                                                |
+| -1              | RES_SYSTEM_ERR      | There is an error that isn't user fault. (e.g: failed to allocate memory to variable)       |
+| -2              | RES_USER_ERR        | There is an error that is user's fault. (e.g: wrong syntax)                                 |
+| -3              | RES_NOT_IMPLEMENTED | This function does not still work.                                                         |
+| -4              | RES_EMPTY           | There is no result for this operation. (e.g: `delete` or `select` criteria does not match any row) |
+
 ## Schema types
-- #### id 
-  16 byte data type to store id (String), example: "407bc45f-e10a-4175-ad4f-940df30ee87c"
+|    Name   |   Type   |  Length  |                 Example                |                    Limitation                    |
+|---------|--------|--------|--------------------------------------|------------------------------------------------|
+| `id`      | `String` | 16 byte  | "407bc45f-e10a-4175-ad4f-940df30ee87c" | String between 1 to 16 characters                |
+| `int`     | `Number` | 4 byte   | 158                                    | Integer between -2,147,483,647 and 2,147,483,647 |
+| `tinyint` | `Number` | 1 byte   | 1                                      | Integer between -128 and 128                     |
+| `text`    | `String` | variable | "Hello World with any length you wish" | String between 0 to 65,536 characters            |
 
-- #### int
-  4 byte data type to store numbers (Number), example: 158
+## Global Variables
+### selectData: SelectData_t
+```
+uint16_t len;
+char tblName[29];
+byte bytes[];
+```
+Will be overwrite with next `select` and `update`
 
-- #### tinyint
-  1 byte data type to store booleans and tiny numbers (Number), example: 1
+### insertData: InsertData_t
+```
+uint16_t usedLen;
+uint16_t len;
+byte bytes[];
+```
+Will be overwrite with next `insert` and `update`
 
-- #### text
-  Variable size data type to store variable size data (String), example: "Hello World with any length you wish"
+## Notices and Considerations
+- Table names length can't be more than 29 character.
+- Database names length can't be more than 31 character.
+- Rows length can't be more than 65,536 bytes (64 KB or 65,536 characters in total). 
+- There is only one `selectData` and one `insertData`, so they will overwrite in next operation. Refer to [selectData](#selectData) and [insertData](#insertData) for more information.
 
 ## Examples and tests
-Refer to test folder.
+Refer to [test](test) folder.
 
 ## Run Tests
 ### In Arduino IDE
