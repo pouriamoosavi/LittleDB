@@ -2,6 +2,7 @@
 A little Sql like database, which runs on esp32. This library works with esp32 file system with help of LittleFS which is a great library to manage fs in embed boards and esp. 
 
 ## Queries
+Execute a query by calling `execQuery` function with one of these queries as input. `execQuery` will return a number which indicates the result of operation (refer to [Responses](#Responses)).
 - #### CREATE_DB = `create db [DB_NAME]`
   Creates a database with this name, Databases are directories inside root file system.
 
