@@ -21,9 +21,12 @@ const String ALTER_TBL_DROP = "drop column ";
 
 // rows
 const String SELECT = "select from ";
+const uint8_t SELECT_LEN = 11;
 const String UPDATE = "update ";
 const String DELETE = "delete from ";
+const uint8_t DELETE_LEN = 11;
 const String INSERT = "insert into ";
+const uint8_t INSERT_LEN = 11;
 
 // others
 const String FORMAT_FS = "drop all dbs and format fs ";
