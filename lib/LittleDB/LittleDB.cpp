@@ -825,19 +825,39 @@ int8_t execSelect(String query) {
     return RES_SYSTEM_ERR;
   }
 
-  int8_t result = RES_USER_ERR;
-  if(fieldName == CELL_TYPE_ID) {
-    result = findRowWithID(tblFile, tblName, fieldVal);
-  } else {
-    String schemPath = prefix + CONNECTED_DB + "/s." + tblName;
-    File schemFile = LITTLEFS.open(schemPath);
-    if(!schemFile || schemFile.isDirectory()){
-      return RES_SYSTEM_ERR;
+  String schemPath = prefix + CONNECTED_DB + "/s." + tblName;
+  File schemFile = LITTLEFS.open(schemPath);
+  if(!schemFile || schemFile.isDirectory()){
+    return RES_SYSTEM_ERR;
+  }
+  String colTypeFromSchem = "";
+  while(schemFile.available()) {
+    // read schem until , which seprates two columns
+    String colFromSchem = schemFile.readStringUntil(',');
+    colFromSchem.trim();
+
+    // read until space which is column name
+    String colNameFromSchem = colFromSchem.substring(0, colFromSchem.indexOf(' '));
+    colNameFromSchem.trim();
+
+    if(colNameFromSchem == fieldName) {
+      colTypeFromSchem = colFromSchem.substring(colFromSchem.indexOf(' '));
+      colTypeFromSchem.trim();
     }
-    result = findRowWithAnyField(schemFile, tblFile, tblName, fieldName, fieldVal);
-    schemFile.close();
   }
 
+  int8_t result = RES_USER_ERR;
+  if(colTypeFromSchem.length() == 0) {
+    return result;
+  }
+
+  if(colTypeFromSchem == CELL_TYPE_ID) {
+    result = findRowWithID(tblFile, tblName, fieldVal);
+  } else {
+    result = findRowWithAnyField(schemFile, tblFile, tblName, fieldName, fieldVal);
+  }
+
+  schemFile.close();
   tblFile.close();
   return result;
 }
