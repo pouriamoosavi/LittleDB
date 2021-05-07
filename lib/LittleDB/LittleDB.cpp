@@ -10,7 +10,8 @@ SelectData_t* selectData;
 
 // work with files
 void listDir(fs::FS &fs, String dirname, uint8_t levels) {
-  Serial.printf("Listing directory: %s\r\n", dirname);
+  Serial.print("Listing directory:");
+  Serial.println(dirname);
 
   File root = fs.open(dirname);
   if (!root) {
