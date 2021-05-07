@@ -83,6 +83,7 @@ Will be overwrite with next `insert` and `update`
 - Table names length can't be more than 29 character.
 - Database names length can't be more than 31 character.
 - Rows length can't be more than 65,536 bytes (64 KB or 65,536 characters in total). 
+- There shouldn't be any special character (, or parentheses) in field values.
 - There is only one `selectData` and one `insertData`, so they will overwrite in next operation. Refer to [selectData](#selectData) and [insertData](#insertData) for more information.
 
 ## Examples and tests
