@@ -10,7 +10,8 @@ SelectData_t* selectData;
 
 // work with files
 void listDir(fs::FS &fs, String dirname, uint8_t levels) {
-  Serial.printf("Listing directory: %s\r\n", dirname);
+  Serial.print("Listing directory:");
+  Serial.println(dirname);
 
   File root = fs.open(dirname);
   if (!root) {
@@ -160,7 +161,7 @@ String getText(SelectData_t* selectData, String colName) {
   uint16_t len = selectData->len;
   uint16_t i=3;
   while(i< len) {
-    if(!schemFile.available()) {
+    if(schemFile.available() <= 0) {
       return "";
     }
 
@@ -225,7 +226,7 @@ int32_t getInt32(SelectData_t* selectData, String colName) {
   uint16_t len = selectData->len;
   uint16_t i=3;
   while(i< len) {
-    if(!schemFile.available()) {
+    if(schemFile.available() <= 0) {
       return 0;
     }
 
@@ -259,7 +260,7 @@ int32_t getInt32(SelectData_t* selectData, String colName) {
     if(colNameFromSchem == colName) {
       int32_t output = 0;
       for(int j=0; j< cellLength; j++){
-        output = (output << (j*8)) | selectData->bytes[i];
+        output = (output << 8) | selectData->bytes[i];
         i++;
       }
       
@@ -272,9 +273,159 @@ int32_t getInt32(SelectData_t* selectData, String colName) {
   return 0;
 }
 
+int8_t readRowIntoSelectData(
+  File tblFile, 
+  String tblName, 
+  uint16_t rowLen, 
+  uint16_t distanceFromRowStart
+) {
+  uint32_t selectDataMemLen = rowLen + sizeof(selectData->tblName) + sizeof(selectData->len); // bytes length + other fixed length attributes.
+  selectData = (SelectData_t*)realloc(selectData, selectDataMemLen); // bytes length + 2 len 
+  if(selectData == NULL) {
+    return RES_SYSTEM_ERR;
+  }
+  tblName.toCharArray(selectData->tblName, tblName.length()+1);
+  selectData->len = rowLen;
+  tblFile.seek(-distanceFromRowStart, SeekCur); // back to the start of the row
+  tblFile.read(selectData->bytes, rowLen);
+  return RES_OK;
+}
+
+bool valEqualRead(File tblFile, String val, String valType) {
+  if(valType == CELL_TYPE_TEXT)  {
+    uint16_t valLen = val.length()+2;
+    byte readLenArr[2];
+    tblFile.read(readLenArr, 2);
+    uint16_t readLen = readLenArr[0] << 8 ^ readLenArr[1];
+    if(valLen != readLen) {
+      return false;
+    } // from here readLen == valLen
+
+    const uint16_t justTextLen = readLen-2;
+    byte readArr[justTextLen];
+    tblFile.read(readArr, justTextLen);
+    byte valArr[justTextLen];
+    val.getBytes(valArr, justTextLen+1);
+    int equal = memcmp(readArr, valArr, justTextLen);
+    return equal == 0;
+
+  } else if(valType == CELL_TYPE_INT){
+    int32_t valInt = val.toInt();
+    byte valArr[CELL_TYPE_INT_LEN];
+    valArr[0] = (valInt >> 24) & 0xFF;
+    valArr[1] = (valInt >> 16) & 0xFF;
+    valArr[2] = (valInt >> 8) & 0xFF;
+    valArr[3] = valInt & 0xFF;
+
+    byte readArr[CELL_TYPE_INT_LEN];
+    tblFile.read(readArr, CELL_TYPE_INT_LEN);
+    int equal = memcmp(readArr, valArr, CELL_TYPE_INT_LEN);
+    return equal == 0;
+
+  } else if (valType == CELL_TYPE_TINYINT) {
+    int8_t valInt = val.toInt();
+    byte valArr[1];
+    valArr[0] = valInt;
+    byte readArr[CELL_TYPE_TINYINT_LEN];
+    tblFile.read(readArr, CELL_TYPE_TINYINT_LEN);
+    int equal = memcmp(readArr, valArr, CELL_TYPE_TINYINT_LEN);
+    return equal == 0;
+
+  }
+
+  return false;
+}
+
+bool safeValEqualRead(File tblFile, String val, String valType) {
+  // valEqualRead function will read on tblFile. 
+  //we need to return where we were befor calling this function
+  const size_t currentPosition = tblFile.position();
+  bool result = valEqualRead(tblFile, val, valType);
+  tblFile.seek(currentPosition, SeekSet);
+  return result;
+}
+
+int8_t findRowWithAnyField(
+  File schemFile, 
+  File tblFile, 
+  String tblName, 
+  String colName, 
+  String val
+) {
+  tblFile.seek(0, SeekSet);
+
+  tblFileLoop: while(tblFile.available() > 0) {
+    schemFile.seek(0, SeekSet);
+
+    uint16_t distanceFromRowStart = 0;
+    byte rowLenArr[2];
+    tblFile.read(rowLenArr, 2); // read length from start of the file
+    distanceFromRowStart += 2;
+    uint16_t rowLen = rowLenArr[0] << 8 ^ rowLenArr[1];
+
+    byte option[1];
+    tblFile.read(option, 1); // read option after length
+    distanceFromRowStart += 1;
+    if(option[0] & OPT_DELETED) { // this line is deleted
+      tblFile.seek(rowLen-distanceFromRowStart, SeekCur); // go to next row
+      goto tblFileLoop;
+    }
+
+    while(schemFile.available() > 0) {
+      // read schem until , which seprates two columns
+      String colFromSchem = schemFile.readStringUntil(',');
+      colFromSchem.trim();
+
+      // read until space which is column name
+      String colNameFromSchem = colFromSchem.substring(0, colFromSchem.indexOf(' '));
+      colNameFromSchem.trim();
+
+      // get from space until end of string which should be column type
+      String colTypeFromSchem = colFromSchem.substring(colFromSchem.indexOf(' '));
+      colTypeFromSchem.trim();
+
+      if(colNameFromSchem == colName) {
+        // this is the field, so compare values
+        bool found = safeValEqualRead(tblFile, val, colTypeFromSchem);
+        if(!found) {
+          tblFile.seek(rowLen-distanceFromRowStart, SeekCur); // go to next row
+          goto tblFileLoop;
+
+        } else {
+          // Hooray!
+          return readRowIntoSelectData(tblFile, tblName, rowLen, distanceFromRowStart);
+        }
+      } else {
+        if(colTypeFromSchem == CELL_TYPE_ID) {
+          tblFile.seek(CELL_TYPE_ID_LEN, SeekCur); // go to next column
+          distanceFromRowStart += CELL_TYPE_ID_LEN;
+
+        } else if (colTypeFromSchem == CELL_TYPE_INT) {
+          tblFile.seek(CELL_TYPE_INT_LEN, SeekCur); // go to next column
+          distanceFromRowStart += CELL_TYPE_INT_LEN;
+          
+        } else if (colTypeFromSchem == CELL_TYPE_TINYINT) {
+          tblFile.seek(CELL_TYPE_TINYINT_LEN, SeekCur); // go to next column
+          distanceFromRowStart += CELL_TYPE_TINYINT_LEN;
+          
+        } else if (colTypeFromSchem == CELL_TYPE_TEXT) {
+          byte colLenArr[2];
+          tblFile.read(colLenArr, 2); // read text len
+          uint16_t colLen = colLenArr[0] << 8 ^ colLenArr[1];
+          tblFile.seek(colLen-2, SeekCur); // -2 because we read 2 byte befor so seek for text len only
+          distanceFromRowStart += colLen;
+        }
+      }
+    }
+    // we are at the end of schemFile and we SHOULD be at the end of this row in tblFile
+  }
+
+  return RES_EMPTY;
+}
+
 int8_t deleteRowWithID(File tblFile, String id) {
   tblFile.seek(0, SeekSet); // make sure the pointer is at start of the file
-  while(tblFile.available()) {
+  while(tblFile.available() > 0) {
     int distanceFromRowStart = 0;
     byte rowLenArr[2];
     tblFile.read(rowLenArr, 2); // read length from start of the file
@@ -318,8 +469,8 @@ int8_t deleteRowWithID(File tblFile, String id) {
 
 int8_t findRowWithID(File tblFile, String tblName, String id) {
   tblFile.seek(0, SeekSet); // make sure the pointer is at start of the file
-  while(tblFile.available()) {
-    int distanceFromRowStart = 0;
+  while(tblFile.available() > 0) {
+    uint16_t distanceFromRowStart = 0;
     byte rowLenArr[2];
     tblFile.read(rowLenArr, 2); // read length from start of the file
     distanceFromRowStart += 2;
@@ -342,16 +493,7 @@ int8_t findRowWithID(File tblFile, String tblName, String id) {
 
     int equal = memcmp(fileIDArr, inputIDArr, CELL_TYPE_ID_LEN);
     if(equal == 0) {
-      int selectDataMemLen = rowLen + sizeof(selectData->tblName) + sizeof(selectData->len); // bytes length + other fixed length attributes.
-      selectData = (SelectData_t*)realloc(selectData, selectDataMemLen); // bytes length + 2 len 
-      if(selectData == NULL) {
-        return RES_SYSTEM_ERR;
-      }
-      tblName.toCharArray(selectData->tblName, tblName.length()+1);
-      selectData->len = rowLen;
-      tblFile.seek(-distanceFromRowStart, SeekCur); // back to the start of the row
-      tblFile.read(selectData->bytes, rowLen);
-      return RES_OK;
+      return readRowIntoSelectData(tblFile, tblName, rowLen, distanceFromRowStart);
     }
 
     tblFile.seek(rowLen-distanceFromRowStart, SeekCur); // go to next row
@@ -370,7 +512,7 @@ int8_t insertDataToBytes(File schemFile, String tblName, String queryValues) {
 
   // first read schema, then find that column in query
   int valueStartIndex=0;
-  while(schemFile.available()) {
+  while(schemFile.available() > 0) {
     // read schem until , which seprates two columns
     String colFromSchem = schemFile.readStringUntil(',');
     colFromSchem.trim();
@@ -387,7 +529,7 @@ int8_t insertDataToBytes(File schemFile, String tblName, String queryValues) {
     valueStartIndex = valueEndIndex+1;
     
     if(value.length() == 0) {
-      break; //while(schemFile.available())
+      break; //while(schemFile.available() > 0)
     }
 
     if(colType == CELL_TYPE_ID) {
@@ -431,7 +573,7 @@ int8_t insertDataToBytes(File schemFile, String tblName, String queryValues) {
 
     // after filling insertData->bytes completely, set insertData->usedLen;
     insertData->usedLen = insertData->len;
-  } //end of while(schemFile.available())
+  } //end of while(schemFile.available() > 0)
 
   insertData->bytes[1] = (insertData->len >> 0) & 0xFF; // length 1
   insertData->bytes[0] = (insertData->len >> 8) & 0xFF; // length 2
@@ -448,7 +590,14 @@ int8_t insertDataToBytes(File schemFile, String tblName, String queryValues) {
  * all into insertedData
  * 5- Write new insertedData into file.
  */
-int8_t updateRowWithID(File schemFile, File tblFile, String tblName, String colName, String colNewValue, String idValue) {
+int8_t updateRowWithID(
+  File schemFile, 
+  File tblFile, 
+  String tblName, 
+  String colName, 
+  String colNewValue, 
+  String idValue
+) {
   schemFile.seek(0, SeekSet); // make sure the pointer is at start of the file
   tblFile.seek(0, SeekSet); // make sure the pointer is at start of the file
 
@@ -467,7 +616,7 @@ int8_t updateRowWithID(File schemFile, File tblFile, String tblName, String colN
   uint16_t changeEndIndex = 3;
   String changeColType = "";
   
-  while(schemFile.available()) {
+  while(schemFile.available() > 0) {
     // read schem until , which seprates two columns
     String colFromSchem = schemFile.readStringUntil(',');
     colFromSchem.trim();
@@ -574,7 +723,7 @@ int8_t updateRowWithID(File schemFile, File tblFile, String tblName, String colN
 }
 
 int8_t compactTable(File oldTblFile, String newTblPath) {
-  while(oldTblFile.available()) {
+  while(oldTblFile.available() > 0) {
     byte rowLenArr[2];
     byte rowOptionArr[1];
     oldTblFile.readBytes((char*)rowLenArr, 2);
@@ -670,12 +819,16 @@ int8_t execAlterTbl(String query) {
 // rows =================================
 int8_t execSelect(String query) {
   int whereIndex = query.indexOf("where");
-  String tblName = query.substring(11, whereIndex);
+  String tblName = query.substring(SELECT_LEN, whereIndex);
   tblName.trim();
 
   int equalIndex = query.indexOf("=", whereIndex);
-  String idValue = query.substring(equalIndex+1);
-  idValue.trim();
+
+  String fieldName = query.substring(whereIndex+6, equalIndex);
+  fieldName.trim();
+
+  String fieldVal = query.substring(equalIndex+1);
+  fieldVal.trim();
 
   String tblPath = prefix + CONNECTED_DB + "/" + tblName;
   File tblFile = LITTLEFS.open(tblPath);
@@ -683,7 +836,40 @@ int8_t execSelect(String query) {
     return RES_SYSTEM_ERR;
   }
 
-  int8_t result = findRowWithID(tblFile, tblName, idValue);
+  String schemPath = prefix + CONNECTED_DB + "/s." + tblName;
+  File schemFile = LITTLEFS.open(schemPath);
+  if(!schemFile || schemFile.isDirectory()){
+    return RES_SYSTEM_ERR;
+  }
+  String colTypeFromSchem = "";
+  while(schemFile.available() > 0) {
+    // read schem until , which seprates two columns
+    String colFromSchem = schemFile.readStringUntil(',');
+    colFromSchem.trim();
+
+    // read until space which is column name
+    String colNameFromSchem = colFromSchem.substring(0, colFromSchem.indexOf(' '));
+    colNameFromSchem.trim();
+
+    if(colNameFromSchem == fieldName) {
+      colTypeFromSchem = colFromSchem.substring(colFromSchem.indexOf(' '));
+      colTypeFromSchem.trim();
+      break;
+    }
+  }
+
+  int8_t result = RES_USER_ERR;
+  if(colTypeFromSchem.length() == 0) {
+    return result;
+  }
+
+  if(colTypeFromSchem == CELL_TYPE_ID) {
+    result = findRowWithID(tblFile, tblName, fieldVal);
+  } else {
+    result = findRowWithAnyField(schemFile, tblFile, tblName, fieldName, fieldVal);
+  }
+
+  schemFile.close();
   tblFile.close();
   return result;
 }
@@ -726,7 +912,7 @@ int8_t execUpdate(String query) {
 
 int8_t execDelete(String query) {
   int whereIndex = query.indexOf("where");
-  String tblName = query.substring(11, whereIndex);
+  String tblName = query.substring(DELETE_LEN, whereIndex);
   tblName.trim();
 
   int equalIndex = query.indexOf("=", whereIndex);
@@ -747,7 +933,7 @@ int8_t execDelete(String query) {
 
 int8_t execInsert(String query) {
   int valuesIndex = query.indexOf("values");
-  String tblName = query.substring(11, valuesIndex);
+  String tblName = query.substring(INSERT_LEN, valuesIndex);
   tblName.trim();
 
   String schemPath = prefix + CONNECTED_DB + "/s." + tblName;
