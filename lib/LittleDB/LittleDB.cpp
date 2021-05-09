@@ -4,11 +4,17 @@
 
 #include "LittleDB.h"
 
+SelectedRows_t* createSelectedRows() {
+  SelectedRows_t* selectedRowsTemp = (SelectedRows_t*)malloc(sizeof(selectedRows->rowsLen));
+  selectedRowsTemp->rowsLen=0;
+  return selectedRowsTemp;
+}
+
 String CONNECTED_DB;
 InsertData_t* insertData;
 SelectData_t* selectData;
+SelectedRows_t* selectedRows = createSelectedRows();
 
-// work with files
 void listDir(fs::FS &fs, String dirname, uint8_t levels) {
   Serial.print("Listing directory:");
   Serial.println(dirname);
@@ -280,14 +286,21 @@ int8_t readRowIntoSelectData(
   uint16_t distanceFromRowStart
 ) {
   uint32_t selectDataMemLen = rowLen + sizeof(selectData->tblName) + sizeof(selectData->len); // bytes length + other fixed length attributes.
-  selectData = (SelectData_t*)realloc(selectData, selectDataMemLen); // bytes length + 2 len 
+  selectData = (SelectData_t*)malloc(selectDataMemLen); // bytes length + 2 len 
   if(selectData == NULL) {
     return RES_SYSTEM_ERR;
   }
+
   tblName.toCharArray(selectData->tblName, tblName.length()+1);
   selectData->len = rowLen;
   tblFile.seek(-distanceFromRowStart, SeekCur); // back to the start of the row
   tblFile.read(selectData->bytes, rowLen);
+
+  uint32_t selectRowMemLen = (selectedRows->rowsLen+1) * sizeof(SelectData_t*) +  sizeof(selectedRows->rowsLen); // bytes length + other fixed length attributes.
+  selectedRows = (SelectedRows_t*)realloc(selectedRows, selectRowMemLen);
+  selectedRows->rows[selectedRows->rowsLen] = selectData;
+  selectedRows->rowsLen += 1;
+
   return RES_OK;
 }
 
@@ -345,6 +358,20 @@ bool safeValEqualRead(File tblFile, String val, String valType) {
   return result;
 }
 
+void freeSelectedRows() {
+  if(selectedRows->rowsLen != 0) {
+    uint32_t i;
+    for(i=0; i< selectedRows->rowsLen; i++) {
+      free(selectedRows->rows[i]);
+    }
+    selectedRows = (SelectedRows_t*)realloc(selectedRows, sizeof(selectedRows->rowsLen));
+  } else {
+    selectedRows = (SelectedRows_t*)malloc(sizeof(selectedRows->rowsLen));
+  }
+  selectedRows->rowsLen = 0;
+  return;
+}
+
 int8_t findRowWithAnyField(
   File schemFile, 
   File tblFile, 
@@ -353,7 +380,9 @@ int8_t findRowWithAnyField(
   String val
 ) {
   tblFile.seek(0, SeekSet);
+  freeSelectedRows();
 
+  bool foundAnything = false;
   tblFileLoop: while(tblFile.available() > 0) {
     schemFile.seek(0, SeekSet);
 
@@ -389,12 +418,18 @@ int8_t findRowWithAnyField(
         bool found = safeValEqualRead(tblFile, val, colTypeFromSchem);
         if(!found) {
           tblFile.seek(rowLen-distanceFromRowStart, SeekCur); // go to next row
-          goto tblFileLoop;
 
         } else {
           // Hooray!
-          return readRowIntoSelectData(tblFile, tblName, rowLen, distanceFromRowStart);
+          foundAnything = true; 
+
+          int8_t readRowResult = readRowIntoSelectData(tblFile, tblName, rowLen, distanceFromRowStart);
+          if(readRowResult != RES_OK) {
+            return readRowResult;
+          }
         }
+
+        goto tblFileLoop;
       } else {
         if(colTypeFromSchem == CELL_TYPE_ID) {
           tblFile.seek(CELL_TYPE_ID_LEN, SeekCur); // go to next column
@@ -420,7 +455,11 @@ int8_t findRowWithAnyField(
     // we are at the end of schemFile and we SHOULD be at the end of this row in tblFile
   }
 
-  return RES_EMPTY;
+  if(foundAnything){ 
+    return RES_OK;
+  } else {
+    return RES_EMPTY;
+  }
 }
 
 int8_t deleteRowWithID(File tblFile, String id) {
@@ -469,6 +508,8 @@ int8_t deleteRowWithID(File tblFile, String id) {
 
 int8_t findRowWithID(File tblFile, String tblName, String id) {
   tblFile.seek(0, SeekSet); // make sure the pointer is at start of the file
+  freeSelectedRows();
+
   while(tblFile.available() > 0) {
     uint16_t distanceFromRowStart = 0;
     byte rowLenArr[2];
@@ -500,8 +541,6 @@ int8_t findRowWithID(File tblFile, String tblName, String id) {
     continue;
   }
 
-  selectData = (SelectData_t*)realloc(selectData, 2); // 2 for len
-  selectData->len = 0;
   return RES_EMPTY; 
 }
 

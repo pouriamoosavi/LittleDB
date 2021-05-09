@@ -22,7 +22,7 @@ Execute a query by calling `execQuery` function with one of these queries as inp
   Not yet implemented.
 
 - #### SELECT `select from [TABLE_NAME] where [COLUMN_NAME]=[CONDITION]`
-  Selects one row and write result into memory. A global variable with name [selectData](#selectData) and type `SelectData_t` will be created. It will be declared with corresponding row. Although it is possible to select base on any field, selecting by `id` is more optimal base on both memory and time.
+  Selects one row and write result into memory. A global variable with name [selectedRows](#selectedRows) and type `SelectedRows_t` will be created. It will be declared with corresponding row(s). Although it is possible to select base on any field, selecting by `id` is more optimal on both memory and time.
 
 - #### UPDATE `update [TABLE_NAME] set [COLUMN_NAME]=[VALUE] where id=[CONDITION]`
   Update one row and set a new value for one column. It tries to cast value into corresponding column's type. Because of write limit on esp memories, this query perform one delete and one insert underneath. For now it is not possible to update base on other fields than `id`
@@ -48,7 +48,7 @@ Execute a query by calling `execQuery` function with one of these queries as inp
 ## Responses
 | Response Number |    Response Code    |                                         Description                                         |
 |---------------|-------------------|-------------------------------------------------------------------------------------------|
-| 0               | RES_OK              | Everything works fine. (e.g: if you are selecting [selectData](#selectData) is now initialized with selected row.)                                                                |
+| 0               | RES_OK              | Everything works fine. (e.g: if you are selecting [selectedRows](#selectedRows) is now initialized with selected row.)                                                                |
 | -1              | RES_SYSTEM_ERR      | There is an error that isn't user fault. (e.g: failed to allocate memory to variable)       |
 | -2              | RES_USER_ERR        | There is an error that is user's fault. (e.g: wrong syntax)                                 |
 | -3              | RES_NOT_IMPLEMENTED | This function does not still work.                                                         |
@@ -63,28 +63,39 @@ Execute a query by calling `execQuery` function with one of these queries as inp
 | `text`    | `String` | variable | "Hello World with any length you wish" | String between 0 to 65,536 characters            |
 
 ## Global Variables
-### selectData: SelectData_t
+### selectedRows
+A global variable of type: `SelectedRows_t`. Will be overwrite with next `select` and `update`.<br>
+Struct: 
+```
+uint32_t rowsLen;
+SelectData_t* rows[];
+```
+
+### selectData
+A global variable of type: `SelectData_t`. Usually you don't need this as you can find all selected rows in `selectedRows->rows`. Every row in `selectedRows->rows` is of this type. So for example you can find the length of 3th selected row with `selectedRows->rows[3]->len`. Will be overwrite with next `select` and `update`.<br>
+Struct: 
 ```
 uint16_t len;
 char tblName[29];
 byte bytes[];
 ```
-Will be overwrite with next `select` and `update`
 
-### insertData: InsertData_t
+### insertData
+A global variable of type: `InsertData_t`. Will be overwrite with next `insert` and `update`.<br>
+Struct: 
 ```
 uint16_t usedLen;
 uint16_t len;
 byte bytes[];
 ```
-Will be overwrite with next `insert` and `update`
+
 
 ## Notices and Considerations
 - Table names length can't be more than 29 character.
 - Database names length can't be more than 31 character.
 - Rows length can't be more than 65,536 bytes (64 KB or 65,536 characters in total). 
 - There shouldn't be any special character (, or parentheses) in field values.
-- There is only one `selectData` and one `insertData`, so they will overwrite in next operation. Refer to [selectData](#selectData) and [insertData](#insertData) for more information.
+- There is only one `selectedRows` and one `insertData`, so they will overwrite in next operation. Refer to [selectedRows](#selectedRows) and [insertData](#insertData) for more information.
 
 ## Examples and tests
 Refer to [test](test) folder.
