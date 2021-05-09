@@ -74,6 +74,12 @@ struct SelectData_t {
 };
 extern SelectData_t* selectData;
 
+struct SelectedRows_t {
+  uint32_t rowsLen;
+  SelectData_t* rows[];
+};
+extern SelectedRows_t* selectedRows;
+
 // work with files ===============================
 void listDir(fs::FS &fs, String dirname, uint8_t levels);
 int8_t createDir(fs::FS &fs, String path);
