@@ -1,4 +1,4 @@
-# Little Sql like DB for ESP32 boards
+# Little Sql like Database for ESP32 boards
 A little Sql like database, which runs on esp32. This library works with esp32 file system with help of LittleFS which is a great library to manage fs in embed boards and esp. 
 
 ## Queries
