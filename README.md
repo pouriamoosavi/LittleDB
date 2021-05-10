@@ -39,11 +39,13 @@ Execute a query by calling `execQuery` function with one of these queries as inp
 - #### COMPACT `compact table [TABLE_NAME]`
   As we mentioned delete query just mark deleted rows as deleted. This query copy all table rows except deleted rows into another table with the same name. This operation makes a lot of write into fs and it is better to be avoid.
 
+## Read Result set
+
 - #### getText(selectDate: SelectData_t, columnName: String | char*): String
-  Get a text base on column name from selectedData and returns it.
+  Get a text base on column name from one selectedData and returns it.
 
 - #### getInt32(selectDate: SelectData_t, columnName: String | char*): int32_t
-  Get an 32 bit int base on column name from selectedData and returns it.
+  Get an 32 bit int base on column name from one selectedData and returns it.
 
 ## Responses
 | Response Number |    Response Code    |                                         Description                                         |
