@@ -116,11 +116,11 @@ Search for `esp32` and install the `esp32` package by `Espressif Systems`.
 Search for `littlefs` and change `Topic` to `data Storage`
 - Now you can use `LittleDB` and `execQuery` in your project.
 
-### In Platform.&#46;IO (VSCode)
+### In Platform&#46;IO (VSCode)
 - Clone project from this repo.
 - Extract it.
-- Open containing folder with VSCode with Platform.&#46;IO installed.
-- Add esp32 library from Platform.&#46;IO library manager. (Wemos lolin32).
+- Open containing folder with VSCode with Platform&#46;IO installed.
+- Add esp32 library from Platform&#46;IO library manager. (Wemos lolin32).
 - Clone <a href="https://github.com/lorol/LITTLEFS">LITTLEFS project</a> from git and put it inside PROJECT_DIR/.pio/libdeps/lolin32/- LittleFS_esp32.  (I couldn't run project after adding LITTLEFS from Platform.&#46;IO library manager)
 - Connect your esp board.
 - If you are using Linux, you probably need to change /dev/ttyUSB0 access (if your board is connected to this port): `sudo chown YOUR_USERNAME /dev/ttyUSB0`.
