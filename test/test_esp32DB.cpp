@@ -177,42 +177,6 @@ void select_one_row_with_age() {
   TEST_ASSERT ( memcmp(selectedRows->rows[0]->bytes, rowShouldBe, 61) == 0 );
 }
 
-void select_one_row_with_ready() {
-  int8_t res = execQuery("select from test_tbl where ready=-1");
-  TEST_ASSERT( res == RES_OK );
-
-  TEST_ASSERT( selectedRows->rows[0]->len == 51);
-
-  byte rowShouldBe[] = {
-    0x00, 0x33, 0x00, 
-    0x32, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-    0x7f, 0xff, 0xff, 0xff,
-    0xff,
-    0x00, 0x0a, 0x4a, 0x6f, 0x68, 0x6e, 0x20, 0x44, 0x6f, 0x65,
-    0x00, 0x00, 0x57, 0x2a, 
-    0x00, 0x0d, 0x64, 0x69, 0x6e, 0x69, 0x6e, 0x67, 0x20, 0x72, 0x6f, 0x6f, 0x6d
-  };
-  TEST_ASSERT ( memcmp(selectedRows->rows[0]->bytes, rowShouldBe, 51) == 0 );
-}
-
-void select_one_row_with_zip() {
-  int8_t res = execQuery("select from test_tbl where zip=22313");
-  TEST_ASSERT( res == RES_OK );
-
-  TEST_ASSERT( selectedRows->rows[0]->len == 61);
-
-  byte rowShouldBe[] = {
-    0x00, 0x3d, 0x00,
-    0x31, 0x32, 0x33, 0x34, 0x35, 0x36, 0x37, 0x38, 0x39, 0x30, 0x61, 0x62, 0x63, 0x00, 0x00, 0x00,
-    0x00, 0x00, 0x00, 0x14,
-    0x01,
-    0x00, 0x14, 0x74, 0x65, 0x78, 0x74, 0x2D, 0x31, 0x32, 0x33, 0x34, 0x35, 0x36, 0x37, 0x38, 0x39, 0x30, 0x61, 0x62, 0x63,
-    0x00, 0x00, 0x57, 0x29,
-    0x00, 0x0d, 0x6c, 0x69, 0x76, 0x69, 0x6e, 0x67, 0x20, 0x72, 0x6f, 0x6f, 0x6d
-  };
-  TEST_ASSERT ( memcmp(selectedRows->rows[0]->bytes, rowShouldBe, 61) == 0 );
-}
-
 void select_one_row_with_roomName() {
   int8_t res = execQuery("select from test_tbl where roomName=dining room");
   TEST_ASSERT( res == RES_OK );
@@ -319,7 +283,7 @@ void select_insert_no_memory_leak() {
   String query;
   int i;
   for(i=0;i< 50; i++){
-    query = "insert into test_tbl values (";
+    query = "insert into test_tbl values (sinml_";
     query.concat(i);
     query.concat(", 2147483648, -1, Hello, ");
     query.concat(i);
@@ -334,6 +298,53 @@ void select_insert_no_memory_leak() {
   TEST_ASSERT( beforHeapSize - afterHeapSize == insertDataAndCodeLength );
 }
 
+void select_not_equal_id() {
+  String schem = "id id, age int, ready tinyint, name text, zip int, roomName text";
+  schem.trim();
+  execQuery("create table test_tbl_2 (" + schem + ")");
+
+  String query;
+  int count = 5;
+  int i;
+  for(i=0; i< count; i++) {
+    query = "insert into test_tbl_2 values (sne_";
+    query.concat(i);
+    query.concat(", 2147483648, -1, Hello ");
+    query.concat(i);
+    query.concat(", ");
+    query.concat(i);
+    query.concat(", insert select multiple rows )");
+    execQuery(query);
+  }
+
+  execQuery("select from test_tbl_2 where id <> sne_0");
+  TEST_ASSERT( selectedRows->rowsLen == 4 );
+  TEST_ASSERT( getText(selectedRows->rows[0], "id") == "sne_1" );
+  TEST_ASSERT( getText(selectedRows->rows[1], "id") == "sne_2" );
+  TEST_ASSERT( getText(selectedRows->rows[2], "id") == "sne_3" );
+  TEST_ASSERT( getText(selectedRows->rows[3], "id") == "sne_4" );
+
+  execQuery("select from test_tbl_2 where id >= sne_3");
+  TEST_ASSERT( selectedRows->rowsLen == 2 );
+  TEST_ASSERT( getText(selectedRows->rows[0], "id") == "sne_3" );
+  TEST_ASSERT( getText(selectedRows->rows[1], "id") == "sne_4" );
+
+  execQuery("select from test_tbl_2 where id <= sne_2");
+  TEST_ASSERT( selectedRows->rowsLen == 3 );
+  TEST_ASSERT( getText(selectedRows->rows[0], "id") == "sne_0" );
+  TEST_ASSERT( getText(selectedRows->rows[1], "id") == "sne_1" );
+  TEST_ASSERT( getText(selectedRows->rows[2], "id") == "sne_2" );
+
+  execQuery("select from test_tbl_2 where id > sne_3");
+  TEST_ASSERT( selectedRows->rowsLen == 1 );
+  TEST_ASSERT( getText(selectedRows->rows[0], "id") == "sne_4" );
+
+  execQuery("select from test_tbl_2 where id < sne_2");
+  TEST_ASSERT( selectedRows->rowsLen == 2 );
+  TEST_ASSERT( getText(selectedRows->rows[0], "id") == "sne_0" );
+  TEST_ASSERT( getText(selectedRows->rows[1], "id") == "sne_1" );
+}
+
 void drop_table() {
   int8_t res = execQuery("drop table test_tbl");
   TEST_ASSERT( res == RES_OK );
@@ -342,6 +353,8 @@ void drop_table() {
   String schemPath = "/test_db/s.test_tbl";
   TEST_ASSERT( LITTLEFS.exists(tblPath) == false );
   TEST_ASSERT( LITTLEFS.exists(schemPath) == false );
+
+  execQuery("drop table test_tbl_2");
 }
 
 void drop_db() {
@@ -368,13 +381,12 @@ void setup() {
   RUN_TEST(select_one_row_with_id);
   RUN_TEST(select_one_row_with_name);
   RUN_TEST(select_one_row_with_age);
-  RUN_TEST(select_one_row_with_ready);
-  RUN_TEST(select_one_row_with_zip);
   RUN_TEST(select_one_row_with_roomName);
   RUN_TEST(update_one_row);
   RUN_TEST(delete_one_row);
   RUN_TEST(insert_select_multiple_rows);
   RUN_TEST(select_insert_no_memory_leak);
+  RUN_TEST(select_not_equal_id);
   RUN_TEST(drop_table);
   RUN_TEST(drop_db);
 
