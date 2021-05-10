@@ -132,26 +132,6 @@ void printArray(byte *input, short len){
   Serial.println("z");
 }
 
-void printInsertData() {
-  short i;
-  for(i=0; i< insertData->len; i++){
-    if(insertData->bytes[i]<16) Serial.print(0);
-    Serial.print(insertData->bytes[i], HEX);
-    Serial.print(" ");
-  }
-  Serial.println("z");
-}
-
-void printSelectData() {
-  short i;
-  for(i=0; i< selectData->len; i++){
-    if(selectData->bytes[i]<16) Serial.print(0);
-    Serial.print(selectData->bytes[i], HEX);
-    Serial.print(" ");
-  }
-  Serial.println("z");
-}
-
 String getText(SelectData_t* selectData, String colName) {
   String tblNameStr = String(selectData->tblName);
   if(!tblNameStr || tblNameStr.length() == 0) {
@@ -319,6 +299,27 @@ bool valEqualRead(File tblFile, String val, String valType) {
     tblFile.read(readArr, justTextLen);
     byte valArr[justTextLen];
     val.getBytes(valArr, justTextLen+1);
+
+    // int compare = memcmp(fileIDArr, inputIDArr, CELL_TYPE_ID_LEN);
+    // if(operatorType == EQUAL_OPERATOR && compare == 0) {
+    //   return readRowIntoSelectData(tblFile, tblName, rowLen, distanceFromRowStart);
+    // }
+    // else if(operatorType == NOT_EQUAL_OPERATOR && compare != 0) {
+    //   return readRowIntoSelectData(tblFile, tblName, rowLen, distanceFromRowStart);
+    // }
+    // else if(operatorType == GREATER_THAN_EQUAL_OPERATOR && compare >= 0) {
+    //   return readRowIntoSelectData(tblFile, tblName, rowLen, distanceFromRowStart);
+    // }
+    // else if(operatorType == LESS_THAN_EQUAL_OPERATOR && compare <= 0) {
+    //   return readRowIntoSelectData(tblFile, tblName, rowLen, distanceFromRowStart);
+    // }
+    // else if(operatorType == GREATER_THAN_OPERATOR && compare > 0) {
+    //   return readRowIntoSelectData(tblFile, tblName, rowLen, distanceFromRowStart);
+    // }
+    // else if(operatorType == LESS_THAN_OPERATOR && compare < 0) {
+    //   return readRowIntoSelectData(tblFile, tblName, rowLen, distanceFromRowStart);
+    // }
+
     int equal = memcmp(readArr, valArr, justTextLen);
     return equal == 0;
 
@@ -377,7 +378,8 @@ int8_t findRowWithAnyField(
   File tblFile, 
   String tblName, 
   String colName, 
-  String val
+  String val,
+  String operatorType
 ) {
   tblFile.seek(0, SeekSet);
   freeSelectedRows();
@@ -506,10 +508,11 @@ int8_t deleteRowWithID(File tblFile, String id) {
   return RES_EMPTY;
 }
 
-int8_t findRowWithID(File tblFile, String tblName, String id) {
+int8_t findRowWithID(File tblFile, String tblName, String id, String operatorType) {
   tblFile.seek(0, SeekSet); // make sure the pointer is at start of the file
   freeSelectedRows();
 
+  bool foundAnything = false;
   while(tblFile.available() > 0) {
     uint16_t distanceFromRowStart = 0;
     byte rowLenArr[2];
@@ -532,16 +535,33 @@ int8_t findRowWithID(File tblFile, String tblName, String id) {
     memset(inputIDArr, 0, CELL_TYPE_ID_LEN);
     id.getBytes(inputIDArr, id.length()+1);
 
-    int equal = memcmp(fileIDArr, inputIDArr, CELL_TYPE_ID_LEN);
-    if(equal == 0) {
-      return readRowIntoSelectData(tblFile, tblName, rowLen, distanceFromRowStart);
+    int compare = memcmp(fileIDArr, inputIDArr, CELL_TYPE_ID_LEN);
+    int8_t result = RES_OK;
+    if(
+      (operatorType == EQUAL_OPERATOR && compare == 0) ||
+      (operatorType == NOT_EQUAL_OPERATOR && compare != 0) ||
+      (operatorType == GREATER_THAN_EQUAL_OPERATOR && compare >= 0) ||
+      (operatorType == LESS_THAN_EQUAL_OPERATOR && compare <= 0) || 
+      (operatorType == GREATER_THAN_OPERATOR && compare > 0) ||
+      (operatorType == LESS_THAN_OPERATOR && compare < 0)
+    ) {
+      result = readRowIntoSelectData(tblFile, tblName, rowLen, distanceFromRowStart);
+      if(result == RES_OK && operatorType != EQUAL_OPERATOR){
+        foundAnything = true; 
+        continue; // we have already read until end of this line. no need to seek
+      } else {
+        return result;
+      }
     }
 
     tblFile.seek(rowLen-distanceFromRowStart, SeekCur); // go to next row
-    continue;
   }
 
-  return RES_EMPTY; 
+  if(foundAnything){ 
+    return RES_OK;
+  } else {
+    return RES_EMPTY;
+  }
 }
 
 int8_t insertDataToBytes(File schemFile, String tblName, String queryValues) {
@@ -640,7 +660,7 @@ int8_t updateRowWithID(
   schemFile.seek(0, SeekSet); // make sure the pointer is at start of the file
   tblFile.seek(0, SeekSet); // make sure the pointer is at start of the file
 
-  uint8_t findResult = findRowWithID(tblFile, tblName, idValue);
+  uint8_t findResult = findRowWithID(tblFile, tblName, idValue, EQUAL_OPERATOR);
   if(findResult != RES_OK) {
     return findResult;
   }
@@ -861,12 +881,53 @@ int8_t execSelect(String query) {
   String tblName = query.substring(SELECT_LEN, whereIndex);
   tblName.trim();
 
-  int equalIndex = query.indexOf("=", whereIndex);
+  int whereEndIndex = whereIndex+6;
 
-  String fieldName = query.substring(whereIndex+6, equalIndex);
+  int operatorIndex;
+  String operatorType;
+
+  int notEqualIndex = query.indexOf(NOT_EQUAL_OPERATOR, whereEndIndex);
+  if(notEqualIndex > 0) {
+    operatorIndex = notEqualIndex;
+    operatorType = NOT_EQUAL_OPERATOR;
+  } else {
+    int greaterThanEqualIndex = query.indexOf(GREATER_THAN_EQUAL_OPERATOR, whereEndIndex);
+    if(greaterThanEqualIndex > 0){
+      operatorIndex = greaterThanEqualIndex;
+      operatorType = GREATER_THAN_EQUAL_OPERATOR;
+    } else {
+      int lessThanEqualIndex = query.indexOf(LESS_THAN_EQUAL_OPERATOR, whereEndIndex);
+      if(lessThanEqualIndex > 0) {
+        operatorIndex = lessThanEqualIndex;
+        operatorType = LESS_THAN_EQUAL_OPERATOR;
+      } else {
+        int greaterThanIndex = query.indexOf(GREATER_THAN_OPERATOR, whereEndIndex);
+        if(greaterThanIndex > 0) {
+          operatorIndex = greaterThanIndex;
+          operatorType = GREATER_THAN_OPERATOR;
+        } else {
+          int lessThanIndex = query.indexOf(LESS_THAN_OPERATOR, whereEndIndex);
+          if(lessThanIndex > 0) {
+            operatorIndex = lessThanIndex;
+            operatorType = LESS_THAN_OPERATOR;
+          } else {
+            int equalIndex = query.indexOf(EQUAL_OPERATOR, whereEndIndex);
+            if(equalIndex > 0) {
+              operatorIndex = equalIndex;
+              operatorType = EQUAL_OPERATOR;
+            } else {
+              return RES_USER_ERR;
+            }
+          }
+        }
+      }
+    }
+  }
+
+  String fieldName = query.substring(whereEndIndex, operatorIndex);
   fieldName.trim();
 
-  String fieldVal = query.substring(equalIndex+1);
+  String fieldVal = query.substring(operatorIndex + operatorType.length());
   fieldVal.trim();
 
   String tblPath = prefix + CONNECTED_DB + "/" + tblName;
@@ -903,9 +964,9 @@ int8_t execSelect(String query) {
   }
 
   if(colTypeFromSchem == CELL_TYPE_ID) {
-    result = findRowWithID(tblFile, tblName, fieldVal);
+    result = findRowWithID(tblFile, tblName, fieldVal, operatorType);
   } else {
-    result = findRowWithAnyField(schemFile, tblFile, tblName, fieldName, fieldVal);
+    result = findRowWithAnyField(schemFile, tblFile, tblName, fieldName, fieldVal, operatorType);
   }
 
   schemFile.close();

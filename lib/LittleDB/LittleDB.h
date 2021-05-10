@@ -59,6 +59,14 @@ const int8_t RES_NOT_IMPLEMENTED = -3;
 const uint8_t OPT_DEFAULT = 0b00000000;
 const uint8_t OPT_DELETED = 0b00000001;
 
+// operators
+const String EQUAL_OPERATOR = "=";
+const String NOT_EQUAL_OPERATOR = "<>";
+const String GREATER_THAN_EQUAL_OPERATOR = ">=";
+const String LESS_THAN_EQUAL_OPERATOR = "<=";
+const String GREATER_THAN_OPERATOR = ">";
+const String LESS_THAN_OPERATOR = "<";
+
 // structs for select and insert
 struct InsertData_t {
   uint16_t usedLen;

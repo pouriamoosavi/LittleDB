@@ -89,7 +89,6 @@ uint16_t len;
 byte bytes[];
 ```
 
-
 ## Notices and Considerations
 - Table names length can't be more than 29 character.
 - Database names length can't be more than 31 character.
@@ -99,6 +98,13 @@ byte bytes[];
 
 ## Examples and tests
 Refer to [test](test) folder.
+
+## Benchmarks
+All benchmarks are for WEMOS lolin 32 board. They are the average of 5 tests.
+- `insert` 100 rows: 6824.4ms
+- `select` 1000 from 100 rows with id equal: 70216ms 
+- `select` 1000 from 100 rows with id other operators: 95361.2ms
+- `select` 1000 from 100 rows with another text field: 215434.3ms
 
 ## Run Tests
 ### In Arduino IDE
