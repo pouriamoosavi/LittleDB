@@ -284,8 +284,9 @@ int8_t readRowIntoSelectData(
   return RES_OK;
 }
 
-bool valEqualRead(File tblFile, String val, String valType) {
-  if(valType == CELL_TYPE_TEXT)  {
+bool valCompareRead(File tblFile, String val, String valType, String operatorType) {
+  int compare = 0;
+  if(valType == CELL_TYPE_TEXT) {
     uint16_t valLen = val.length()+2;
     byte readLenArr[2];
     tblFile.read(readLenArr, 2);
@@ -300,28 +301,7 @@ bool valEqualRead(File tblFile, String val, String valType) {
     byte valArr[justTextLen];
     val.getBytes(valArr, justTextLen+1);
 
-    // int compare = memcmp(fileIDArr, inputIDArr, CELL_TYPE_ID_LEN);
-    // if(operatorType == EQUAL_OPERATOR && compare == 0) {
-    //   return readRowIntoSelectData(tblFile, tblName, rowLen, distanceFromRowStart);
-    // }
-    // else if(operatorType == NOT_EQUAL_OPERATOR && compare != 0) {
-    //   return readRowIntoSelectData(tblFile, tblName, rowLen, distanceFromRowStart);
-    // }
-    // else if(operatorType == GREATER_THAN_EQUAL_OPERATOR && compare >= 0) {
-    //   return readRowIntoSelectData(tblFile, tblName, rowLen, distanceFromRowStart);
-    // }
-    // else if(operatorType == LESS_THAN_EQUAL_OPERATOR && compare <= 0) {
-    //   return readRowIntoSelectData(tblFile, tblName, rowLen, distanceFromRowStart);
-    // }
-    // else if(operatorType == GREATER_THAN_OPERATOR && compare > 0) {
-    //   return readRowIntoSelectData(tblFile, tblName, rowLen, distanceFromRowStart);
-    // }
-    // else if(operatorType == LESS_THAN_OPERATOR && compare < 0) {
-    //   return readRowIntoSelectData(tblFile, tblName, rowLen, distanceFromRowStart);
-    // }
-
-    int equal = memcmp(readArr, valArr, justTextLen);
-    return equal == 0;
+    compare = memcmp(readArr, valArr, justTextLen);
 
   } else if(valType == CELL_TYPE_INT){
     int32_t valInt = val.toInt();
@@ -333,8 +313,7 @@ bool valEqualRead(File tblFile, String val, String valType) {
 
     byte readArr[CELL_TYPE_INT_LEN];
     tblFile.read(readArr, CELL_TYPE_INT_LEN);
-    int equal = memcmp(readArr, valArr, CELL_TYPE_INT_LEN);
-    return equal == 0;
+    compare = memcmp(readArr, valArr, CELL_TYPE_INT_LEN);
 
   } else if (valType == CELL_TYPE_TINYINT) {
     int8_t valInt = val.toInt();
@@ -342,19 +321,31 @@ bool valEqualRead(File tblFile, String val, String valType) {
     valArr[0] = valInt;
     byte readArr[CELL_TYPE_TINYINT_LEN];
     tblFile.read(readArr, CELL_TYPE_TINYINT_LEN);
-    int equal = memcmp(readArr, valArr, CELL_TYPE_TINYINT_LEN);
-    return equal == 0;
+    compare = memcmp(readArr, valArr, CELL_TYPE_TINYINT_LEN);
 
+  } else {
+    return false;
+  }
+
+  if(
+    (operatorType == EQUAL_OPERATOR && compare == 0) ||
+    (operatorType == NOT_EQUAL_OPERATOR && compare != 0) ||
+    (operatorType == GREATER_THAN_EQUAL_OPERATOR && compare >= 0) ||
+    (operatorType == LESS_THAN_EQUAL_OPERATOR && compare <= 0) || 
+    (operatorType == GREATER_THAN_OPERATOR && compare > 0) ||
+    (operatorType == LESS_THAN_OPERATOR && compare < 0)
+  ) {
+    return true;
   }
 
   return false;
 }
 
-bool safeValEqualRead(File tblFile, String val, String valType) {
-  // valEqualRead function will read on tblFile. 
+bool safeValCompareRead(File tblFile, String val, String valType, String operatorType) {
+  // valCompareRead function will read on tblFile. 
   //we need to return where we were befor calling this function
   const size_t currentPosition = tblFile.position();
-  bool result = valEqualRead(tblFile, val, valType);
+  bool result = valCompareRead(tblFile, val, valType, operatorType);
   tblFile.seek(currentPosition, SeekSet);
   return result;
 }
@@ -417,11 +408,8 @@ int8_t findRowWithAnyField(
 
       if(colNameFromSchem == colName) {
         // this is the field, so compare values
-        bool found = safeValEqualRead(tblFile, val, colTypeFromSchem);
-        if(!found) {
-          tblFile.seek(rowLen-distanceFromRowStart, SeekCur); // go to next row
-
-        } else {
+        bool found = safeValCompareRead(tblFile, val, colTypeFromSchem, operatorType);
+        if(found) {
           // Hooray!
           foundAnything = true; 
 
@@ -429,6 +417,9 @@ int8_t findRowWithAnyField(
           if(readRowResult != RES_OK) {
             return readRowResult;
           }
+
+        } else {
+          tblFile.seek(rowLen-distanceFromRowStart, SeekCur); // go to next row
         }
 
         goto tblFileLoop;
