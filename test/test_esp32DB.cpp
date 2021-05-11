@@ -345,6 +345,65 @@ void select_not_equal_id() {
   TEST_ASSERT( getText(selectedRows->rows[1], "id") == "sne_1" );
 }
 
+void select_not_equal_other_fields() {
+  execQuery("select from test_tbl_2 where name <> Hello 1");
+  TEST_ASSERT( selectedRows->rowsLen == 4 );
+  TEST_ASSERT( getText(selectedRows->rows[0], "name") == "Hello 0" );
+  TEST_ASSERT( getText(selectedRows->rows[1], "name") == "Hello 2" );
+  TEST_ASSERT( getText(selectedRows->rows[2], "name") == "Hello 3" );
+  TEST_ASSERT( getText(selectedRows->rows[3], "name") == "Hello 4" );
+
+  execQuery("select from test_tbl_2 where name >= Hello 1");
+  TEST_ASSERT( selectedRows->rowsLen == 4 );
+  TEST_ASSERT( getText(selectedRows->rows[0], "name") == "Hello 1" );
+  TEST_ASSERT( getText(selectedRows->rows[1], "name") == "Hello 2" );
+  TEST_ASSERT( getText(selectedRows->rows[2], "name") == "Hello 3" );
+  TEST_ASSERT( getText(selectedRows->rows[3], "name") == "Hello 4" );
+
+  execQuery("select from test_tbl_2 where name <= Hello 1");
+  TEST_ASSERT( selectedRows->rowsLen == 2 );
+  TEST_ASSERT( getText(selectedRows->rows[0], "name") == "Hello 0" );
+  TEST_ASSERT( getText(selectedRows->rows[1], "name") == "Hello 1" );
+
+  execQuery("select from test_tbl_2 where name > Hello 1");
+  TEST_ASSERT( selectedRows->rowsLen == 3 );
+  TEST_ASSERT( getText(selectedRows->rows[0], "name") == "Hello 2" );
+  TEST_ASSERT( getText(selectedRows->rows[1], "name") == "Hello 3" );
+  TEST_ASSERT( getText(selectedRows->rows[2], "name") == "Hello 4" );
+
+  execQuery("select from test_tbl_2 where name < Hello 1");
+  TEST_ASSERT( selectedRows->rowsLen == 1 );
+  TEST_ASSERT( getText(selectedRows->rows[0], "name") == "Hello 0" );
+
+
+  execQuery("select from test_tbl_2 where zip <> 0");
+  TEST_ASSERT( selectedRows->rowsLen == 4 );
+  TEST_ASSERT( getText(selectedRows->rows[0], "id") == "sne_1" );
+  TEST_ASSERT( getText(selectedRows->rows[1], "id") == "sne_2" );
+  TEST_ASSERT( getText(selectedRows->rows[2], "id") == "sne_3" );
+  TEST_ASSERT( getText(selectedRows->rows[3], "id") == "sne_4" );
+
+  execQuery("select from test_tbl_2 where zip >= 3");
+  TEST_ASSERT( selectedRows->rowsLen == 2 );
+  TEST_ASSERT( getText(selectedRows->rows[0], "id") == "sne_3" );
+  TEST_ASSERT( getText(selectedRows->rows[1], "id") == "sne_4" );
+
+  execQuery("select from test_tbl_2 where zip <= 2");
+  TEST_ASSERT( selectedRows->rowsLen == 3 );
+  TEST_ASSERT( getInt32(selectedRows->rows[0], "zip") == 0 );
+  TEST_ASSERT( getInt32(selectedRows->rows[1], "zip") == 1 );
+  TEST_ASSERT( getInt32(selectedRows->rows[2], "zip") == 2 );
+
+  execQuery("select from test_tbl_2 where zip > 3");
+  TEST_ASSERT( selectedRows->rowsLen == 1 );
+  TEST_ASSERT( getInt32(selectedRows->rows[0], "zip") == 4 );
+
+  execQuery("select from test_tbl_2 where zip < 2");
+  TEST_ASSERT( selectedRows->rowsLen == 2 );
+  TEST_ASSERT( getInt32(selectedRows->rows[0], "zip") == 0 );
+  TEST_ASSERT( getInt32(selectedRows->rows[1], "zip") == 1 );
+}
+
 void drop_table() {
   int8_t res = execQuery("drop table test_tbl");
   TEST_ASSERT( res == RES_OK );
@@ -387,6 +446,7 @@ void setup() {
   RUN_TEST(insert_select_multiple_rows);
   RUN_TEST(select_insert_no_memory_leak);
   RUN_TEST(select_not_equal_id);
+  RUN_TEST(select_not_equal_other_fields);
   RUN_TEST(drop_table);
   RUN_TEST(drop_db);
 

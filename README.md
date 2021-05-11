@@ -21,8 +21,10 @@ Execute a query by calling `execQuery` function with one of these queries as inp
 - #### ALTER_TBL `alter table [TABLE_NAME]` _(Not yet implemented)_
   Not yet implemented.
 
-- #### SELECT `select from [TABLE_NAME] where [COLUMN_NAME]=[CONDITION]`
-  Selects one row and write result into memory. A global variable with name [selectedRows](#selectedRows) and type `SelectedRows_t` will be created. It will be declared with corresponding row(s). Although it is possible to select base on any field, selecting by `id` is more optimal on both memory and time.
+- #### SELECT `select from [TABLE_NAME] where [COLUMN_NAME][OPERATOR][CONDITION]`
+  Selects one row and write result into memory. A global variable with name [selectedRows](#selectedRows) and type `SelectedRows_t` will be created and declared with corresponding row(s).<br>
+  OPERATIONS are `=`, `>=`, `<=`, `<`, `>` and `<>`(not equal).<br>
+  Although it is possible to select base on any COLUMN_NAME, selecting by `id` is more optimal both on memory and time.
 
 - #### UPDATE `update [TABLE_NAME] set [COLUMN_NAME]=[VALUE] where id=[CONDITION]`
   Update one row and set a new value for one column. It tries to cast value into corresponding column's type. Because of write limit on esp memories, this query perform one delete and one insert underneath. For now it is not possible to update base on other fields than `id`
@@ -37,7 +39,7 @@ Execute a query by calling `execQuery` function with one of these queries as inp
   Delete everything and format fs.
 
 - #### COMPACT `compact table [TABLE_NAME]`
-  As we mentioned delete query just mark deleted rows as deleted. This query copy all table rows except deleted rows into another table with the same name. This operation makes a lot of write into fs and it is better to be avoid.
+  As mentioned, delete query just mark deleted rows as deleted. This query copy all table rows except deleted rows into another table with the same name. This operation makes a lot of write into fs and it is better to be avoid.
 
 ## Read Result set
 
@@ -45,7 +47,8 @@ Execute a query by calling `execQuery` function with one of these queries as inp
   Get a text base on column name from one selectedData and returns it.
 
 - #### getInt32(selectDate: SelectData_t, columnName: String | char*): int32_t
-  Get an 32 bit int base on column name from one selectedData and returns it.
+  Get a 32 bit int base on column name from one selectedData and returns it.
+
 
 ## Responses
 | Response Number |    Response Code    |                                         Description                                         |
@@ -120,7 +123,8 @@ Add `http://arduino.esp8266.com/stable/package_esp8266com_index.json, https://dl
 Search for `esp32` and install the `esp32` package by `Espressif Systems`.
 - In Arduino IDE  Open Tools > Manage libraries
 Search for `littlefs` and change `Topic` to `data Storage`
-- Now you can use `LittleDB` and `execQuery` in your project.
+- Change board to your own board.
+- Upload test file into your board using programmer.
 
 ### In Platform&#46;IO (VSCode)
 - Clone project from this repo.
