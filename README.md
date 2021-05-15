@@ -3,7 +3,7 @@ A little Sql like database, which runs on esp32. This library works with esp32 f
 
 ## Queries
 Execute a query by calling `execQuery` function with one of these queries as input. `execQuery` will return a number which indicates the result of operation (refer to [Responses](#Responses)).
-- #### CREATE_DB = `create db [DB_NAME]`
+- #### CREATE_DB `create db [DB_NAME]`
   Creates a database with this name, Databases are directories inside root file system.
 
 - #### DROP_DB `drop db [DB_NAME]` _(Caution)_
@@ -116,12 +116,13 @@ All benchmarks are for WEMOS lolin 32 board. They are the average of 5 tests.
 - Rename main.cpp into YOUR_PROJECT_NAME.ino (in Arduino IDE, .ino file and project must have the same name).
 - In Arduino IDE Open File > Preferences
 Add `http://arduino.esp8266.com/stable/package_esp8266com_index.json, https://dl.espressif.com/dl/package_esp32_index.json` Into `Additional Board Manager URLs`.
-- In Arduino IDE Open Tools > Board > Board Manager...
+- Open Tools > Board > Board Manager...
 Search for `esp32` and install the `esp32` package by `Espressif Systems`.
-- In Arduino IDE  Open Tools > Manage libraries
-Search for `littlefs` and change `Topic` to `data Storage`
+- Open Tools > Manage libraries
+Search for `littlefs` and change `Topic` to `data Storage` and install littleFS_esp32
 - Change board to your own board.
-- Upload test file into your board using programmer.
+- You probably need to change `#include <LittleDB.h>` into `#include "LittleDB.h"`.
+- Upload test file into your board to run tests or use `LittleDB` library in your own sketch.
 
 ### In Platform.&#46;IO (VSCode)
 - Clone project from this repo.

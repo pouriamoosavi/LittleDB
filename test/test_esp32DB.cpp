@@ -265,7 +265,7 @@ void insert_select_multiple_rows() {
   execQuery("select from test_tbl where roomName=insert select multiple rows");
   TEST_ASSERT( selectedRows->rowsLen == count );
 
-  for(i=0; i< count; i++) {
+  for(i=0; i< count; i++) { // In real world applications use selectedRows->rowsLen instead of count.
     String readRoomName = getText(selectedRows->rows[i], "roomName");
     TEST_ASSERT( readRoomName == "insert select multiple rows" );
 
