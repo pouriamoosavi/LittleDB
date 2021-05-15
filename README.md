@@ -1,4 +1,4 @@
-# Little Sql like DB for ESP32 boards
+# Little Sql like Database for ESP32 boards
 A little Sql like database, which runs on esp32. This library works with esp32 file system with help of LittleFS which is a great library to manage fs in embed boards and esp. 
 
 ## Queries
@@ -41,11 +41,14 @@ Execute a query by calling `execQuery` function with one of these queries as inp
 - #### COMPACT `compact table [TABLE_NAME]`
   As mentioned, delete query just mark deleted rows as deleted. This query copy all table rows except deleted rows into another table with the same name. This operation makes a lot of write into fs and it is better to be avoid.
 
+## Read Result set
+
 - #### getText(selectDate: SelectData_t, columnName: String | char*): String
-  Get a text base on column name from selectedData and returns it.
+  Get a text base on column name from one selectedData and returns it.
 
 - #### getInt32(selectDate: SelectData_t, columnName: String | char*): int32_t
-  Get a 32 bit int base on column name from selectedData and returns it.
+  Get a 32 bit int base on column name from one selectedData and returns it.
+
 
 ## Responses
 | Response Number |    Response Code    |                                         Description                                         |
@@ -124,11 +127,11 @@ Search for `littlefs` and change `Topic` to `data Storage` and install littleFS_
 - You probably need to change `#include <LittleDB.h>` into `#include "LittleDB.h"`.
 - Upload test file into your board to run tests or use `LittleDB` library in your own sketch.
 
-### In Platform.&#46;IO (VSCode)
+### In Platform&#46;IO (VSCode)
 - Clone project from this repo.
 - Extract it.
-- Open containing folder with VSCode with Platform.&#46;IO installed.
-- Add esp32 library from Platform.&#46;IO library manager. (Wemos lolin32).
+- Open containing folder with VSCode with Platform&#46;IO installed.
+- Add esp32 library from Platform&#46;IO library manager. (Wemos lolin32).
 - Clone <a href="https://github.com/lorol/LITTLEFS">LITTLEFS project</a> from git and put it inside PROJECT_DIR/.pio/libdeps/lolin32/- LittleFS_esp32.  (I couldn't run project after adding LITTLEFS from Platform.&#46;IO library manager)
 - Connect your esp board.
 - If you are using Linux, you probably need to change /dev/ttyUSB0 access (if your board is connected to this port): `sudo chown YOUR_USERNAME /dev/ttyUSB0`.
