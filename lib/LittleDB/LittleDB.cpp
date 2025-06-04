@@ -298,8 +298,8 @@ bool valCompareRead(File tblFile, String val, String valType, String operatorTyp
     const uint16_t justTextLen = readLen-2;
     byte readArr[justTextLen];
     tblFile.read(readArr, justTextLen);
-    byte valArr[justTextLen];
-    val.getBytes(valArr, justTextLen+1);
+    byte valArr[justTextLen + 1];
+    val.getBytes(valArr, justTextLen + 1);
 
     compare = memcmp(readArr, valArr, justTextLen);
 
@@ -476,9 +476,9 @@ int8_t deleteRowWithID(File tblFile, String id) {
     tblFile.read(fileIDArr, CELL_TYPE_ID_LEN);
     distanceFromRowStart += CELL_TYPE_ID_LEN;
 
-    byte inputIDArr[CELL_TYPE_ID_LEN];
-    memset(inputIDArr, 0, CELL_TYPE_ID_LEN);
-    id.getBytes(inputIDArr, id.length()+1);
+    byte inputIDArr[CELL_TYPE_ID_LEN + 1];
+    memset(inputIDArr, 0, CELL_TYPE_ID_LEN + 1);
+    id.getBytes(inputIDArr, CELL_TYPE_ID_LEN + 1);
 
     int equal = memcmp(fileIDArr, inputIDArr, CELL_TYPE_ID_LEN);
     if(equal == 0){
@@ -522,9 +522,9 @@ int8_t findRowWithID(File tblFile, String tblName, String id, String operatorTyp
     byte fileIDArr[CELL_TYPE_ID_LEN];
     tblFile.read(fileIDArr, CELL_TYPE_ID_LEN);
     distanceFromRowStart += CELL_TYPE_ID_LEN;
-    byte inputIDArr[CELL_TYPE_ID_LEN];
-    memset(inputIDArr, 0, CELL_TYPE_ID_LEN);
-    id.getBytes(inputIDArr, id.length()+1);
+    byte inputIDArr[CELL_TYPE_ID_LEN + 1];
+    memset(inputIDArr, 0, CELL_TYPE_ID_LEN + 1);
+    id.getBytes(inputIDArr, CELL_TYPE_ID_LEN + 1);
 
     int compare = memcmp(fileIDArr, inputIDArr, CELL_TYPE_ID_LEN);
     int8_t result = RES_OK;
