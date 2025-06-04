@@ -151,7 +151,7 @@ String getText(SelectData_t* selectData, String colName) {
       return "";
     }
 
-    // read schem until , which seprates two columns
+    // read schem until , which separates two columns
     String colFromSchem = schemFile.readStringUntil(',');
     colFromSchem.trim();
 
@@ -216,7 +216,7 @@ int32_t getInt32(SelectData_t* selectData, String colName) {
       return 0;
     }
 
-    // read schem until , which seprates two columns
+    // read schem until , which separates two columns
     String colFromSchem = schemFile.readStringUntil(',');
     colFromSchem.trim();
 
@@ -394,7 +394,7 @@ int8_t findRowWithAnyField(
     }
 
     while(schemFile.available() > 0) {
-      // read schem until , which seprates two columns
+      // read schem until , which separates two columns
       String colFromSchem = schemFile.readStringUntil(',');
       colFromSchem.trim();
 
@@ -563,7 +563,7 @@ int8_t insertDataToBytes(File schemFile, String tblName, String queryValues) {
   // first read schema, then find that column in query
   int valueStartIndex=0;
   while(schemFile.available() > 0) {
-    // read schem until , which seprates two columns
+    // read schem until , which separates two columns
     String colFromSchem = schemFile.readStringUntil(',');
     colFromSchem.trim();
     // get from space until end of string which should be column type
@@ -667,7 +667,7 @@ int8_t updateRowWithID(
   String changeColType = "";
   
   while(schemFile.available() > 0) {
-    // read schem until , which seprates two columns
+    // read schem until , which separates two columns
     String colFromSchem = schemFile.readStringUntil(',');
     colFromSchem.trim();
 
@@ -934,7 +934,7 @@ int8_t execSelect(String query) {
   }
   String colTypeFromSchem = "";
   while(schemFile.available() > 0) {
-    // read schem until , which seprates two columns
+    // read schem until , which separates two columns
     String colFromSchem = schemFile.readStringUntil(',');
     colFromSchem.trim();
 
