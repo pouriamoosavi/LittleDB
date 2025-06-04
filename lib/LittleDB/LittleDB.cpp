@@ -653,11 +653,15 @@ int8_t updateRowWithID(
 
   uint8_t findResult = findRowWithID(tblFile, tblName, idValue, EQUAL_OPERATOR);
   if(findResult != RES_OK) {
+    schemFile.close();
+    tblFile.close();
     return findResult;
   }
 
   uint8_t deleteResult = deleteRowWithID(tblFile, idValue);
   if(deleteResult != RES_OK) {
+    schemFile.close();
+    tblFile.close();
     return deleteResult;
   }
   tblFile.close();
