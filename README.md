@@ -150,4 +150,4 @@ To use this library in your own project you need to add `/lib/LittleDB` director
 - Increase row length by adding another 2 bytes into length.
 - Change id type from text(16) into uint32.
 - Add index to id field.
-- Abillity to use `and` and `or` in queris.
+- Ability to use `and` and `or` in queries.
